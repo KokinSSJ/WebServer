@@ -24,6 +24,9 @@
 //#include <SD.h>
 #include "SdFat.h"
 SdFat SD;
+#include <SDFatUtil.h>
+
+
 #include <Ethernet.h>
 #define REQ_BUF_SZ   30
 
@@ -49,14 +52,14 @@ void setup()
 {
   // Open serial communications and wait for port to open:
   Serial.begin(115200);
-  
+
   Serial.print("Initializing SD card...");
   // On the Ethernet Shield, CS is pin 4. It's set as an output by default.
   // Note that even if it's not used as the CS pin, the hardware SS pin
   // (10 on most Arduino boards, 53 on the Mega) must be left as an output
   // or the SD library functions will not work.
   pinMode(10, OUTPUT);
-
+//  SD.init(SPI_HALF_SPEED, 4);
   if (!SD.begin(4)) {
     Serial.println("initialization failed!");
     return;
@@ -106,6 +109,7 @@ void setup()
   Serial.print("Serwer parcuje na adresie IP: ");
   Serial.println(Ethernet.localIP());
 
+
 }
 
 void loop()
@@ -119,6 +123,7 @@ void loop()
     boolean currentLineIsBlank = true;
     long initTime = millis();
     while (client.connected()) {
+      char url[30]={0};
       if (client.available()) {
         char c = client.read();
         if (req_index < (REQ_BUF_SZ - 1)) {
@@ -132,38 +137,52 @@ void loop()
         // so you can send a reply
         if (c == '\n' && currentLineIsBlank) {
                     // open requested web page file
-                    if (StrContains(HTTP_req, "GET / ")
-                                 || StrContains(HTTP_req, "GET /index.html")) {
+                    HttpReqURL(url, HTTP_req);
+//                    Serial.println(" \n test programu: ");
+//                    for(int i=0; i<30;i++){
+//                      Serial.print(url[i]);
+//                    }
+                  
+                    if (strstr(HTTP_req, "GET / ")
+                                 || strstr(HTTP_req, "GET /index.html")) {
                         client.println("HTTP/1.1 200 OK");
                         client.println("Content-Type: text/html");
                         client.println("Connnection: close");
                         client.println();
                         webFile = SD.open("index.html");        // open web page file
                     }
-                    else if (StrContains(HTTP_req, "GET /css/bootstrap.min.css")) {
-                      Serial.print("działa PETLA bootstrap");
-                        client.println("HTTP/1.1 200 OK");
+                    else{
+                      Serial.print("inne opcje");
+                      client.println("HTTP/1.1 200 OK");
                         client.println("Content-Type: text/css");
                         client.println("Connnection: close");
                         client.println();
-                        webFile = SD.open("/css/bootstrap.min.css");        // open web page file
+                        webFile = SD.open(url); 
                     }
-                    else if (StrContains(HTTP_req, "GET /css/styles.css")) {
-                      Serial.print("działa PETLA styles");
-                        client.println("HTTP/1.1 200 OK");
-                        client.println("Content-Type: text/css");
-                        client.println("Connnection: close");
-                        client.println();
-                        webFile = SD.open("/css/styles.css");        // open web page file
-                    }
-                    
-                    else if (StrContains(HTTP_req, "GET /pic.jpg")) {
-                        webFile = SD.open("pic.jpg");
-                        if (webFile) {
-                            client.println("HTTP/1.1 200 OK");
-                            client.println();
-                        }
-                    }
+//                    else if (StrContains(HTTP_req, "GET /css/bootstrap.min.css")) {
+//                      Serial.print("działa PETLA bootstrap");
+//                        client.println("HTTP/1.1 200 OK");
+//                        client.println("Content-Type: text/css");
+//                        client.println("Connnection: close");
+//                        client.println();
+//                        webFile = SD.open("/css/bootstrap.min.css");        // open web page file
+//                    }
+//                    else if (StrContains(HTTP_req, "GET /css/styles.css")) {
+//                      Serial.print("działa PETLA styles");
+//                        client.println("HTTP/1.1 200 OK");
+//                        client.println("Content-Type: text/css");
+//                        client.println("Connnection: close");
+//                        client.println();
+//                        webFile = SD.open("/css/styles.css");        // open web page file
+//                    }
+//                    
+//                    else if (StrContains(HTTP_req, "GET /pic.jpg")) {
+//                        webFile = SD.open("pic.jpg");
+//                        if (webFile) {
+//                            client.println("HTTP/1.1 200 OK");
+//                            client.println();
+//                        }
+//                    }
 //                    if (webFile) {
 //                        while(webFile.available()) {
 //                            client.write(webFile.read()); // send web page to client
@@ -181,28 +200,37 @@ void loop()
 //                        webFile.close();
 //                    }
 if (webFile) {
-
-              byte clientBuf[128];
+              int number = 1024;
+              byte clientBuf[number];
            
               int clientCount = 0;              
-
+            long initTimeFile= micros();
+            long timeFile;
+            uint8_t b;
               while (webFile.available()) 
               { 
-                
-             
-                clientBuf[clientCount] = webFile.read();
+//                initTimeFile = micros();
+             webFile.read(&clientBuf, 1024);
+//                clientBuf[clientCount] = webFile.read(&clientBuf, 2);
                 clientCount++;
-
-                if(clientCount > 127)
-                {
-                  client.write(clientBuf,128);
-                  clientCount = 0;
-                }                
+        
+//                if(clientCount > number-1)
+//                {
+//                  timeFile = micros()-initTimeFile;
+                
+//                Serial.print("\nczas " );
+//              Serial.println(timeFile);
+                  client.write(clientBuf,number);
+//                  clientCount = 0;
+//                }                
               }
+              
+              
               if(clientCount > 0) client.write(clientBuf,clientCount); 
               webFile.close();
               
             }
+            
                     
                     // reset buffer index and all buffer elements to 0
                     req_index = 0;
@@ -245,29 +273,54 @@ void StrClear(char *str, char length)
 // searches for the string sfind in the string str
 // returns 1 if string found
 // returns 0 if string not found
-byte StrContains(char *str, char *sfind)
-{
-    char found = 0;
-    char index = 0;
-    char len;
+//byte StrContains(char *str, char *sfind)
+//{
+//    char found = 0;
+//    char index = 0;
+//    char len;
+//
+//    len = strlen(str);
+//    if (strlen(sfind) > len) {
+//        return 0;
+//    }
+//    while (index < len) {
+//        if (str[index] == sfind[found]) {
+//            found++;
+//            if (strlen(sfind) == found) {
+//                return 1;
+//            }
+//        }
+//        else {
+//            found = 0;
+//        }
+//        index++;
+//    }
+//
+//    return 0;
+//}
 
-    len = strlen(str);
-    if (strlen(sfind) > len) {
-        return 0;
-    }
-    while (index < len) {
-        if (str[index] == sfind[found]) {
-            found++;
-            if (strlen(sfind) == found) {
-                return 1;
-            }
-        }
-        else {
-            found = 0;
-        }
-        index++;
-    }
+void HttpReqURL(char *url, char *str){
+  boolean firstSpace =false;
 
-    return 0;
+//  boolean secondSpace = false;
+  byte len = strlen(str); 
+  byte j=0;
+  for(byte i=0; i<=len; i++){
+    
+   if(firstSpace==true){
+      url[j]=str[i];
+     j++;
+     }
+   if(str[i]==' ' && firstSpace ==false){
+      firstSpace = true;
+     }
+   else if(str[i]==' ' && firstSpace ==true){
+      firstSpace = false;
+      break;
+     }
+     
+     
+  }
+
 }
 
