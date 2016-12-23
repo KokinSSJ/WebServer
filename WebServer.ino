@@ -25,7 +25,7 @@
 #include "SdFat.h"
 SdFat SD;
 #include <Ethernet.h>
-#define REQ_BUF_SZ   20
+#define REQ_BUF_SZ   30
 
 File webFile;
 char *plik = "index.html";
@@ -39,6 +39,7 @@ IPAddress ip(192, 168, 1, 105);
 // with the IP address and port you want to use
 // (port 80 is default for HTTP):
 EthernetServer server(12345);
+EthernetClient client;
 
 
 char HTTP_req[REQ_BUF_SZ] = {0}; // buffered HTTP request stored as null terminated string
@@ -111,7 +112,7 @@ void loop()
 {
   String stringOne = "text dużo tekstu";
   // nothing happens after setup
-    EthernetClient client = server.available();
+    client = server.available();
   if (client) {
     Serial.println("new client");
     // an http request ends with a blank line
@@ -137,11 +138,10 @@ void loop()
                         client.println("Content-Type: text/html");
                         client.println("Connnection: close");
                         client.println();
-                        Serial.print("działa PETLA index");
                         webFile = SD.open("index.html");        // open web page file
                     }
-                    else if (StrContains(HTTP_req, "GET /css/bootstrap")) {
-                      Serial.print("działa PETLA ");
+                    else if (StrContains(HTTP_req, "GET /css/bootstrap.min.css")) {
+                      Serial.print("działa PETLA bootstrap");
                         client.println("HTTP/1.1 200 OK");
                         client.println("Content-Type: text/css");
                         client.println("Connnection: close");
@@ -245,14 +245,13 @@ void StrClear(char *str, char length)
 // searches for the string sfind in the string str
 // returns 1 if string found
 // returns 0 if string not found
-char StrContains(char *str, char *sfind)
+byte StrContains(char *str, char *sfind)
 {
     char found = 0;
     char index = 0;
     char len;
 
     len = strlen(str);
-    
     if (strlen(sfind) > len) {
         return 0;
     }
