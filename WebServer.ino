@@ -206,25 +206,27 @@ if (webFile) {
               int clientCount = 0;              
             long initTimeFile= micros();
             long timeFile;
+            
             uint8_t b;
+            initTimeFile = micros();
               while (webFile.available()) 
               { 
-//                initTimeFile = micros();
-             webFile.read(&clientBuf, 1024);
+//                
+             webFile.read(&clientBuf, number);
 //                clientBuf[clientCount] = webFile.read(&clientBuf, 2);
-                clientCount++;
+//                clientCount++;
         
 //                if(clientCount > number-1)
 //                {
-//                  timeFile = micros()-initTimeFile;
-                
-//                Serial.print("\nczas " );
-//              Serial.println(timeFile);
+//                  
                   client.write(clientBuf,number);
 //                  clientCount = 0;
 //                }                
               }
-              
+              timeFile = micros()-initTimeFile;
+                
+                Serial.print("\nczas " );
+              Serial.println(timeFile);
               
               if(clientCount > 0) client.write(clientBuf,clientCount); 
               webFile.close();
