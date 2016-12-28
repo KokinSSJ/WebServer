@@ -83,7 +83,7 @@ void loop()
     boolean firstSpace = false; // uzyskiwanie adresu i typu 
       byte  newLine=0;      //uzyskiwanie adresu i typu
       
-    while (client.connected() ) {
+    while (client.connected() && client.available() ) {
 //      && client.available()
 //      Serial.println(" ");
 //      Serial.print("HTTP_reqURL is: ");
@@ -94,30 +94,30 @@ void loop()
 //      if (client.available()) {
       if(!readAll){
         c= client.read();
-        if(firstSpace == true && newLine==0 && c!=' '){
+        if(firstSpace == true){
           HTTP_reqURL[reqURL_index] = c; 
           reqURL_index++;
         }
-        else if(firstSpace ==true && newLine==6 && c!=','){
-          HTTP_reqTEXT[reqTEXT_index]=c;
-          reqTEXT_index++;
-        }
-        if(firstSpace == false && c==' ' && (newLine==0 || newLine==6)){
+//        else if(firstSpace ==true && newLine==6 && c!=','){
+//          HTTP_reqTEXT[reqTEXT_index]=c;
+//          reqTEXT_index++;
+//        }
+        if(firstSpace == false && c==' '){
           firstSpace = true;
         }
-        else if(c== ' ' && firstSpace == true && newLine==0){
+        else if(firstSpace == true && c== ' '){
           firstSpace = false;
         }
-        else if(c==' ' && firstSpace == false && newLine==0){
-          firstSpace =true;
-        }
-        else if(c==',' && newLine==6 || !client.available()){
-          readAll=true;
-          firstSpace = false;
-        }
+//        else if(c==' ' && firstSpace == false && newLine==0){
+//          firstSpace =true;
+//        }
+//        else if(c==',' && newLine==6 || !client.available()){
+//          readAll=true;
+//          firstSpace = false;
+//        }
 
         if(c=='\n'){
-          newLine++;
+//          newLine++;
           readAll=true;
         }
 //        Serial.print("ilosc nowych lini");
@@ -144,8 +144,8 @@ void loop()
 //        else{
           Serial.print("file: ");
           Serial.println(HTTP_reqURL);
-          Serial.print("text type: ");
-          Serial.println(HTTP_reqTEXT);
+//          Serial.print("text type: ");
+//          Serial.println(HTTP_reqTEXT);
      
         //        Serial.print(url);
 
@@ -170,32 +170,27 @@ void loop()
         Serial.println(strstr(HTTP_reqURL, ".tiff") ? "tiff file" : "not tiff file");
         Serial.print("\n Time for strstr");
         Serial.println(micros()-initTimeSTR); 
-          if ((strstr(HTTP_reqURL, "/")
-              || strstr(HTTP_reqURL, "GET /index.html"))&& strlen(HTTP_reqURL)==1) {
-            
-              client.println("HTTP/1.1 200 OK");
+        initTimeSTR = micros();
+
+
+          client.println("HTTP/1.1 200 OK");
+        
+          if (strstr(HTTP_reqURL, "/ ") || strstr(HTTP_reqURL, "/index.html")) {
+              Serial.print("\n index.html file will be send");
               client.println("Content-Type: text/html");
-              client.println("Connnection: close");
-              client.println();
               webFile = SD.open("index.html");        // open web page file
             }
-//            else if(strstr(HTTP_reqURL, ".ttf") || strstr(HTTP_reqURL, ".woff")){
-//              Serial.print("czcionka woff, tiff itd");
-//              client.println("HTTP/1.1 200 OK");
-////              client.println("Content-Type: text/css");
-//              client.println("Content-Type: */*");
-//              client.println("Connnection: close");
-//              client.println();
-//              webFile = SD.open(HTTP_reqURL);
-//            }
-            else {
-              Serial.print("inne opcje");
-              client.println("HTTP/1.1 200 OK");
+            else if(strstr(HTTP_reqURL, ".css ")){
+              Serial.print("style file (css) will be send");
               client.println("Content-Type: text/css");
-//              client.println("Content-Type: */*");
-              client.println("Connnection: close");
-              client.println();
-              webFile = SD.open(HTTP_reqURL);
+              webFile = SD.open(HTTP_reqURL);        // open web page file
+            }
+            else {
+              Serial.print("another type of file will be send");
+//              client.println("Content-Type: text/css");
+              client.println("Content-Type: */*");
+              webFile = SD.open(HTTP_reqURL);        // open web page file
+
             }
             //                    else if (StrContains(HTTP_req, "GET /css/bootstrap.min.css")) {
             //                      Serial.print("działa PETLA bootstrap");
@@ -237,27 +232,44 @@ void loop()
             ////                        }
             //                        webFile.close();
             //                    }
+                        client.println("Connnection: close");
+              client.println();
+              
+
+
+
+            Serial.print("\nSend message");
+            Serial.println(micros()-initTimeSTR);
             if (webFile) {
-              int number = 1024;
-              byte clientBuf[number];
+              int number = 512;
+              
 
               int clientCount = 0;
               long initTimeFile = micros();
               long timeFile;
-
+              byte clientBuf[number];
               uint8_t b;
               initTimeFile = micros();
+              int numLeft;
               while (webFile.available())
               {
-                //
-                webFile.read(clientBuf, number);
+//                Serial.print("Rozmiar tablicy: ");
+//                Serial.println(sizeof(clientBuf));
+                
+                //  !!!!! read too much letters in last run
+//               numLeft = webFile.read(clientBuf, number);
+
                 //                clientBuf[clientCount] = webFile.read(&clientBuf, 2);
-                //                clientCount++;
+//                                clientCount++;
 
                 //                if(clientCount > number-1)
                 //                {
                 //
-                client.write(clientBuf, number);
+//              Serial.print("Rozmiar sprawdzonej tablicy: ");
+//              Serial.println(arrayHttpLength(clientBuf));
+                client.write(clientBuf, webFile.read(clientBuf, number));
+//                client.write("XXXX: ");
+//                client.write(clientCount);
                 //                  clientCount = 0;
                 //                }
               }
@@ -266,7 +278,7 @@ void loop()
               Serial.print("\nczas wysłania danych " );
               Serial.println(timeFile);
 
-              if (clientCount > 0) client.write(clientBuf, clientCount);
+//              if (clientCount > 0) client.write(clientBuf, clientCount);
               webFile.close();
 
             }
@@ -384,5 +396,21 @@ void HttpRequest (char *sign, char *url, char *type){
   if(firstSpace = true){
     
   }
+}
+
+int arrayHttpLength(char *buf){
+  byte controlNumber=0;
+  for(int i=0; i<512;i++){
+
+    Serial.println(sizeof(buf));
+    if(buf[i]==NULL){
+     controlNumber++;
+     Serial.print(buf[i]);
+    }
+    if(controlNumber>2){
+      return i;
+    }
+  }
+  return sizeof(*buf);
 }
 
