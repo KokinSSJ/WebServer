@@ -3,7 +3,7 @@
   1. comunication by local host server -
   2. increased reading speed from SD card by buffor
   3. send file which browser wants (auto file directory localization)
-  4.
+  4. increased sending proces - over 20times!
 
 
 
@@ -62,7 +62,7 @@ void setup()
 
 void loop()
 {
-  client = server.available(); // może to wyżej??? trzeba sprawdzić czy to tworzy co chwila nowego?
+  client = server.available(); 
   if (client) {
     Serial.println("new client");
 
